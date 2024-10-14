@@ -5,6 +5,7 @@
 #import <Foundation/Foundation.h>
 #import <AVKit/AVKit.h>
 #import <AVFoundation/AVFoundation.h>
+#import <PallyConFPSSDK/PallyConFPSSDK-ObjC.h>
 
 @interface BetterPlayerPallyconDrmDelegate : NSObject
 
@@ -12,6 +13,7 @@
 @property(readonly, nonatomic) NSURL* licenseURL;
 @property(readonly, nonatomic) NSString* siteId;
 @property(readonly, nonatomic) NSMutableDictionary* requestHeaders;
+@property (strong, nonatomic) PallyConFPSSDK *pallycon;
 
 - (instancetype)init:(NSURL *)certificateURL withLicenseURL:(NSURL *)licenseURL
     withHeaders:(NSDictionary *)headers;
