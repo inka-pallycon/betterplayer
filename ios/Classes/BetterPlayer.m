@@ -33,6 +33,7 @@ AVPictureInPictureController *_pipController;
         _player.automaticallyWaitsToMinimizeStalling = false;
     }
     self._observersAdded = false;
+    _pallycon = [[PallyConFPSSDK alloc] init];
     return self;
 }
 
@@ -245,8 +246,22 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
             drmHeaders = @{};
         }
 
+        NSString* content_id = @"";
+        NSString* pallycon_token = @"";
         for (id key in drmHeaders) {
             NSLog(@"key: %@, value: %@ \n", key, [drmHeaders objectForKey:key]);
+            if ([key isEqualToString:@"pallycon-customdata-v2"]) {
+                pallycon_token = [NSString stringWithString:drmHeaders[key]];
+
+                NSData *decodedData = [[NSData alloc] initWithBase64EncodedString:pallycon_token options:0];
+                NSError *error = nil;
+                NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:decodedData options:0 error:&error];
+                if (!error) {
+                    content_id = jsonDict[@"cid"]; // JSON에서 cid 값을 content_id에 할당
+                } else {
+                    NSLog(@"JSON 파싱 오류: %@", error.localizedDescription);
+                }
+            }
         }
 
         AVPlayerItem* item;
@@ -264,12 +279,8 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
                                                     options:@{@"AVURLAssetHTTPHeaderFieldsKey" : headers}];
 
             if (certificateUrl && certificateUrl != [NSNull null] && [certificateUrl length] > 0) {
-                NSURL * certificateNSURL = [[NSURL alloc] initWithString: certificateUrl];
-                NSURL * licenseNSURL = [[NSURL alloc] initWithString: licenseUrl];
-                _pallyconLoaderDelegate = [[BetterPlayerPallyconDrmDelegate alloc] init:certificateNSURL withLicenseURL:licenseNSURL withHeaders:drmHeaders];
-                dispatch_queue_attr_t qos = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_DEFAULT, -1);
-                dispatch_queue_t streamQueue = dispatch_queue_create("streamQueue", qos);
-                [asset.resourceLoader setDelegate:_pallyconLoaderDelegate queue:streamQueue];
+                PallyConDrmConfiguration* config = [[PallyConDrmConfiguration alloc] initWithAvURLAsset:asset contentId:content_id certificateUrl:certificateUrl authData:pallycon_token delegate:self licenseUrl:licenseUrl keyIdList:nil licenseHttpHeader:nil licenseCookies:nil allowsKeyRotation:false renewalInterval:0];
+                [_pallycon prepareWithContent:config];
             }
             item = [AVPlayerItem playerItemWithAsset:asset];
         }
