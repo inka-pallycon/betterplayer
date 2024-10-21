@@ -244,8 +244,6 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
             NSLog(@"drmHeader is null");
             drmHeaders = @{};
         }
-        NSString* content_id = @"";
-        NSString* pallycon_token = @"";
 
         for (id key in drmHeaders) {
             NSLog(@"key: %@, value: %@ \n", key, [drmHeaders objectForKey:key]);
@@ -262,7 +260,7 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
 
             item = [cacheManager getCachingPlayerItemForNormalPlayback:url cacheKey:cacheKey videoExtension: videoExtension headers:headers];
         } else {
-            AVURLAsset* urlAsset = [AVURLAsset URLAssetWithURL:url
+            AVURLAsset* asset = [AVURLAsset URLAssetWithURL:url
                                                     options:@{@"AVURLAssetHTTPHeaderFieldsKey" : headers}];
 
             if (certificateUrl && certificateUrl != [NSNull null] && [certificateUrl length] > 0) {
@@ -273,7 +271,7 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
                 dispatch_queue_t streamQueue = dispatch_queue_create("streamQueue", qos);
                 [asset.resourceLoader setDelegate:_pallyconLoaderDelegate queue:streamQueue];
             }
-            item = [AVPlayerItem playerItemWithAsset:urlAsset];
+            item = [AVPlayerItem playerItemWithAsset:asset];
         }
 
         if (@available(iOS 10.0, *) && overriddenDuration > 0) {
