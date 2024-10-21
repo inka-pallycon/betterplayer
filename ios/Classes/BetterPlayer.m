@@ -33,7 +33,6 @@ AVPictureInPictureController *_pipController;
         _player.automaticallyWaitsToMinimizeStalling = false;
     }
     self._observersAdded = false;
-    _pallycon = [[PallyConFPSSDK alloc] init];
     return self;
 }
 
@@ -250,13 +249,6 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
 
         for (id key in drmHeaders) {
             NSLog(@"key: %@, value: %@ \n", key, [drmHeaders objectForKey:key]);
-            if ([key isEqualToString:@"contentId"]) {
-                content_id = [NSString stringWithString:drmHeaders[key]];
-            } 
-            
-            if ([key isEqualToString:@"pallyconToken"]) {
-                pallycon_token = [NSString stringWithString:drmHeaders[key]];
-            }
         }
 
         AVPlayerItem* item;
@@ -276,13 +268,10 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
             if (certificateUrl && certificateUrl != [NSNull null] && [certificateUrl length] > 0) {
                 NSURL * certificateNSURL = [[NSURL alloc] initWithString: certificateUrl];
                 NSURL * licenseNSURL = [[NSURL alloc] initWithString: licenseUrl];
-                //_pallyconLoaderDelegate = [[BetterPlayerPallyconDrmAssetsLoaderDelegate alloc] init:certificateNSURL withLicenseURL:licenseNSURL withHeaders:drmHeaders];
+                _pallyconLoaderDelegate = [[BetterPlayerPallyconDrmDelegate alloc] init:certificateNSURL withLicenseURL:licenseNSURL withHeaders:drmHeaders];
                 dispatch_queue_attr_t qos = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_DEFAULT, -1);
                 dispatch_queue_t streamQueue = dispatch_queue_create("streamQueue", qos);
-                //[asset.resourceLoader setDelegate:_pallyconLoaderDelegate queue:streamQueue];
-
-                PallyConDrmConfiguration* config = [[PallyConDrmConfiguration alloc] initWithAvURLAsset:urlAsset contentId:content_id certificateUrl:certificateUrl authData:pallycon_token delegate:self licenseUrl:licenseUrl keyIdList:nil licenseHttpHeader:nil licenseCookies:nil allowsKeyRotation:false renewalInterval:0];
-                [_pallycon prepareWithContent:config];
+                [asset.resourceLoader setDelegate:_pallyconLoaderDelegate queue:streamQueue];
             }
             item = [AVPlayerItem playerItemWithAsset:urlAsset];
         }
