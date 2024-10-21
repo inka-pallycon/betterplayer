@@ -33,6 +33,7 @@ AVPictureInPictureController *_pipController;
         _player.automaticallyWaitsToMinimizeStalling = false;
     }
     self._observersAdded = false;
+    _pallycon = [[PallyConFPSSDK alloc] init];
     return self;
 }
 
@@ -198,6 +199,7 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
 - (void)setDataSourceURL:(NSURL*)url withKey:(NSString*)key withCertificateUrl:(NSString*)certificateUrl withLicenseUrl:(NSString*)licenseUrl withHeaders:(NSDictionary*)headers withCache:(BOOL)useCache cacheKey:(NSString*)cacheKey cacheManager:(CacheManager*)cacheManager overriddenDuration:(int) overriddenDuration videoExtension: (NSString*) videoExtension{
     _overriddenDuration = 0;
     if (headers == [NSNull null] || headers == NULL){
+        NSLog(@"header is null");
         headers = @{};
     }
     
@@ -229,6 +231,66 @@ static inline CGFloat radiansToDegrees(CGFloat radians) {
         _overriddenDuration = overriddenDuration;
     }
     return [self setDataSourcePlayerItem:item withKey:key];
+}
+
+- (void)setDataSourceURL:(NSURL*)url withKey:(NSString*)key withCertificateUrl:(NSString*)certificateUrl withLicenseUrl:(NSString*)licenseUrl withHeaders:(NSDictionary*)headers withDrmHeaders:(NSDictionary*)drmHeaders withCache:(BOOL)useCache cacheKey:(NSString*)cacheKey cacheManager:(CacheManager*)cacheManager overriddenDuration:(int) overriddenDuration videoExtension: (NSString*) videoExtension
+{
+    _overriddenDuration = 0;
+        if (headers == [NSNull null] || headers == NULL){
+            NSLog(@"header is null");
+            headers = @{};
+        }
+
+        if (drmHeaders == [NSNull null] || drmHeaders == NULL){
+            NSLog(@"drmHeader is null");
+            drmHeaders = @{};
+        }
+        NSString* content_id = @"";
+        NSString* pallycon_token = @"";
+
+        for (id key in drmHeaders) {
+            NSLog(@"key: %@, value: %@ \n", key, [drmHeaders objectForKey:key]);
+            if ([key isEqualToString:@"contentId"]) {
+                content_id = [NSString stringWithString:drmHeaders[key]];
+            } 
+            
+            if ([key isEqualToString:@"pallyconToken"]) {
+                pallycon_token = [NSString stringWithString:drmHeaders[key]];
+            }
+        }
+
+        AVPlayerItem* item;
+        if (useCache){
+            if (cacheKey == [NSNull null]){
+                cacheKey = nil;
+            }
+            if (videoExtension == [NSNull null]){
+                videoExtension = nil;
+            }
+
+            item = [cacheManager getCachingPlayerItemForNormalPlayback:url cacheKey:cacheKey videoExtension: videoExtension headers:headers];
+        } else {
+            AVURLAsset* urlAsset = [AVURLAsset URLAssetWithURL:url
+                                                    options:@{@"AVURLAssetHTTPHeaderFieldsKey" : headers}];
+
+            if (certificateUrl && certificateUrl != [NSNull null] && [certificateUrl length] > 0) {
+                NSURL * certificateNSURL = [[NSURL alloc] initWithString: certificateUrl];
+                NSURL * licenseNSURL = [[NSURL alloc] initWithString: licenseUrl];
+                //_pallyconLoaderDelegate = [[BetterPlayerPallyconDrmAssetsLoaderDelegate alloc] init:certificateNSURL withLicenseURL:licenseNSURL withHeaders:drmHeaders];
+                dispatch_queue_attr_t qos = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_DEFAULT, -1);
+                dispatch_queue_t streamQueue = dispatch_queue_create("streamQueue", qos);
+                //[asset.resourceLoader setDelegate:_pallyconLoaderDelegate queue:streamQueue];
+
+                PallyConDrmConfiguration* config = [[PallyConDrmConfiguration alloc] initWithAvURLAsset:urlAsset contentId:content_id certificateUrl:certificateUrl authData:pallycon_token delegate:self licenseUrl:licenseUrl keyIdList:nil licenseHttpHeader:nil licenseCookies:nil allowsKeyRotation:false renewalInterval:0];
+                [_pallycon prepareWithContent:config];
+            }
+            item = [AVPlayerItem playerItemWithAsset:urlAsset];
+        }
+
+        if (@available(iOS 10.0, *) && overriddenDuration > 0) {
+            _overriddenDuration = overriddenDuration;
+        }
+        return [self setDataSourcePlayerItem:item withKey:key];
 }
 
 - (void)setDataSourcePlayerItem:(AVPlayerItem*)item withKey:(NSString*)key{
